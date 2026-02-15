@@ -247,6 +247,31 @@ class ArrSuiteMCPServer:
                     }
                 }
             ),
+            Tool(
+                name="sonarr_get_queue",
+                description="Get the Sonarr download queue",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "page": {"type": "integer", "description": "Page number", "default": 1},
+                        "page_size": {"type": "integer", "description": "Items per page", "default": 20},
+                        "include_unknown_series": {"type": "boolean", "description": "Include unknown series items", "default": False}
+                    }
+                }
+            ),
+            Tool(
+                name="sonarr_delete_queue_item",
+                description="Remove an item from the Sonarr download queue",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "queue_id": {"type": "integer", "description": "Queue item ID to remove"},
+                        "remove_from_client": {"type": "boolean", "description": "Also remove from download client", "default": True},
+                        "blocklist": {"type": "boolean", "description": "Add release to blocklist to prevent re-download", "default": False}
+                    },
+                    "required": ["queue_id"]
+                }
+            ),
         ]
 
     def _get_radarr_tools(self) -> list[Tool]:
@@ -285,6 +310,31 @@ class ArrSuiteMCPServer:
                     "properties": {
                         "movie_id": {"type": "integer", "description": "Optional movie ID"}
                     }
+                }
+            ),
+            Tool(
+                name="radarr_get_queue",
+                description="Get the Radarr download queue",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "page": {"type": "integer", "description": "Page number", "default": 1},
+                        "page_size": {"type": "integer", "description": "Items per page", "default": 20},
+                        "include_unknown_movies": {"type": "boolean", "description": "Include unknown movie items", "default": False}
+                    }
+                }
+            ),
+            Tool(
+                name="radarr_delete_queue_item",
+                description="Remove an item from the Radarr download queue",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "queue_id": {"type": "integer", "description": "Queue item ID to remove"},
+                        "remove_from_client": {"type": "boolean", "description": "Also remove from download client", "default": True},
+                        "blocklist": {"type": "boolean", "description": "Add release to blocklist to prevent re-download", "default": False}
+                    },
+                    "required": ["queue_id"]
                 }
             ),
         ]
@@ -517,6 +567,19 @@ class ArrSuiteMCPServer:
             if "series_id" in arguments:
                 return await client.get_series(arguments["series_id"])
             return await client.get_all_series()
+        elif name == "sonarr_get_queue":
+            return await client.get_queue(
+                page=arguments.get("page", 1),
+                page_size=arguments.get("page_size", 20),
+                include_unknown_series=arguments.get("include_unknown_series", False)
+            )
+        elif name == "sonarr_delete_queue_item":
+            await client.delete_queue_item(
+                queue_id=arguments["queue_id"],
+                remove_from_client=arguments.get("remove_from_client", True),
+                blocklist=arguments.get("blocklist", False)
+            )
+            return {"status": "success", "message": f"Queue item {arguments['queue_id']} removed"}
 
     async def _handle_radarr_tool(self, name: str, arguments: dict) -> Any:
         """Handle Radarr-specific tools."""
@@ -530,6 +593,19 @@ class ArrSuiteMCPServer:
             if "movie_id" in arguments:
                 return await client.get_movie(arguments["movie_id"])
             return await client.get_all_movies()
+        elif name == "radarr_get_queue":
+            return await client.get_queue(
+                page=arguments.get("page", 1),
+                page_size=arguments.get("page_size", 20),
+                include_unknown_movies=arguments.get("include_unknown_movies", False)
+            )
+        elif name == "radarr_delete_queue_item":
+            await client.delete_queue_item(
+                queue_id=arguments["queue_id"],
+                remove_from_client=arguments.get("remove_from_client", True),
+                blocklist=arguments.get("blocklist", False)
+            )
+            return {"status": "success", "message": f"Queue item {arguments['queue_id']} removed"}
 
     async def _handle_prowlarr_tool(self, name: str, arguments: dict) -> Any:
         """Handle Prowlarr-specific tools."""
