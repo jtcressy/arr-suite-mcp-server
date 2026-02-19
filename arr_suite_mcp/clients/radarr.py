@@ -192,6 +192,38 @@ class RadarrClient(BaseArrClient):
             }
         )
 
+    async def get_manual_import(
+        self,
+        download_id: Optional[str] = None,
+        movie_id: Optional[int] = None,
+        folder: Optional[str] = None,
+        filter_existing_files: bool = True
+    ) -> list[dict[str, Any]]:
+        """Get files available for manual import."""
+        params: dict[str, Any] = {"filterExistingFiles": filter_existing_files}
+        if download_id:
+            params["downloadId"] = download_id
+        if movie_id:
+            params["movieId"] = movie_id
+        if folder:
+            params["folder"] = folder
+        return await self.get("manualimport", params=params)
+
+    async def manual_import(
+        self,
+        files: list[dict[str, Any]],
+        import_mode: str = "auto"
+    ) -> dict[str, Any]:
+        """Execute manual import for selected files."""
+        return await self.post(
+            "command",
+            json={"name": "ManualImport", "files": files, "importMode": import_mode}
+        )
+
+    async def grab_queue_item(self, queue_id: int) -> Any:
+        """Force grab a queue item."""
+        return await self.post(f"queue/grab/{queue_id}", json={})
+
     # History
     async def get_history(
         self,

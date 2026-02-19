@@ -165,6 +165,37 @@ class SonarrClient(BaseArrClient):
             }
         )
 
+    async def get_manual_import(
+        self,
+        download_id: Optional[str] = None,
+        series_id: Optional[int] = None,
+        season_number: Optional[int] = None,
+        folder: Optional[str] = None,
+        filter_existing_files: bool = True
+    ) -> list[dict[str, Any]]:
+        """Get files available for manual import."""
+        params: dict[str, Any] = {"filterExistingFiles": filter_existing_files}
+        if download_id:
+            params["downloadId"] = download_id
+        if series_id:
+            params["seriesId"] = series_id
+        if season_number is not None:
+            params["seasonNumber"] = season_number
+        if folder:
+            params["folder"] = folder
+        return await self.get("manualimport", params=params)
+
+    async def manual_import(
+        self,
+        files: list[dict[str, Any]],
+        import_mode: str = "auto"
+    ) -> dict[str, Any]:
+        """Execute manual import for selected files."""
+        return await self.post(
+            "command",
+            json={"name": "ManualImport", "files": files, "importMode": import_mode}
+        )
+
     # History
     async def get_history(
         self,
