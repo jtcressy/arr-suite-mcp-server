@@ -272,6 +272,41 @@ class ArrSuiteMCPServer:
                     "required": ["queue_id"]
                 }
             ),
+            Tool(
+                name="sonarr_get_manual_import",
+                description="List files available for manual import in Sonarr. Use download_id to inspect a specific download, or folder to browse a path.",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "download_id": {"type": "string", "description": "Download client ID to inspect"},
+                        "series_id": {"type": "integer", "description": "Series ID to filter by"},
+                        "season_number": {"type": "integer", "description": "Season number to filter by"},
+                        "folder": {"type": "string", "description": "Folder path to scan for importable files"},
+                        "filter_existing_files": {"type": "boolean", "description": "Filter out already-imported files", "default": True}
+                    }
+                }
+            ),
+            Tool(
+                name="sonarr_manual_import",
+                description="Execute a manual import of selected files into Sonarr",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "files": {
+                            "type": "array",
+                            "description": "List of files to import, each with path, seriesId, seasonNumber, episodeIds, quality, and languages",
+                            "items": {"type": "object"}
+                        },
+                        "import_mode": {
+                            "type": "string",
+                            "description": "Import mode",
+                            "enum": ["auto", "move", "copy"],
+                            "default": "auto"
+                        }
+                    },
+                    "required": ["files"]
+                }
+            ),
         ]
 
     def _get_radarr_tools(self) -> list[Tool]:
@@ -333,6 +368,51 @@ class ArrSuiteMCPServer:
                         "queue_id": {"type": "integer", "description": "Queue item ID to remove"},
                         "remove_from_client": {"type": "boolean", "description": "Also remove from download client", "default": True},
                         "blocklist": {"type": "boolean", "description": "Add release to blocklist to prevent re-download", "default": False}
+                    },
+                    "required": ["queue_id"]
+                }
+            ),
+            Tool(
+                name="radarr_get_manual_import",
+                description="List files available for manual import in Radarr. Use download_id to inspect a specific download, or folder to browse a path.",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "download_id": {"type": "string", "description": "Download client ID to inspect"},
+                        "movie_id": {"type": "integer", "description": "Movie ID to filter by"},
+                        "folder": {"type": "string", "description": "Folder path to scan for importable files"},
+                        "filter_existing_files": {"type": "boolean", "description": "Filter out already-imported files", "default": True}
+                    }
+                }
+            ),
+            Tool(
+                name="radarr_manual_import",
+                description="Execute a manual import of selected files into Radarr",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "files": {
+                            "type": "array",
+                            "description": "List of files to import, each with path, movieId, quality, and languages",
+                            "items": {"type": "object"}
+                        },
+                        "import_mode": {
+                            "type": "string",
+                            "description": "Import mode",
+                            "enum": ["auto", "move", "copy"],
+                            "default": "auto"
+                        }
+                    },
+                    "required": ["files"]
+                }
+            ),
+            Tool(
+                name="radarr_grab_queue_item",
+                description="Force grab a queue item in Radarr, triggering the download client to fetch it",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "queue_id": {"type": "integer", "description": "Queue item ID to grab"}
                     },
                     "required": ["queue_id"]
                 }
@@ -580,6 +660,20 @@ class ArrSuiteMCPServer:
                 blocklist=arguments.get("blocklist", False)
             )
             return {"status": "success", "message": f"Queue item {arguments['queue_id']} removed"}
+        elif name == "sonarr_get_manual_import":
+            return await client.get_manual_import(
+                download_id=arguments.get("download_id"),
+                series_id=arguments.get("series_id"),
+                season_number=arguments.get("season_number"),
+                folder=arguments.get("folder"),
+                filter_existing_files=arguments.get("filter_existing_files", True)
+            )
+        elif name == "sonarr_manual_import":
+            await client.manual_import(
+                files=arguments["files"],
+                import_mode=arguments.get("import_mode", "auto")
+            )
+            return {"status": "success", "message": "Manual import initiated"}
 
     async def _handle_radarr_tool(self, name: str, arguments: dict) -> Any:
         """Handle Radarr-specific tools."""
@@ -606,6 +700,22 @@ class ArrSuiteMCPServer:
                 blocklist=arguments.get("blocklist", False)
             )
             return {"status": "success", "message": f"Queue item {arguments['queue_id']} removed"}
+        elif name == "radarr_get_manual_import":
+            return await client.get_manual_import(
+                download_id=arguments.get("download_id"),
+                movie_id=arguments.get("movie_id"),
+                folder=arguments.get("folder"),
+                filter_existing_files=arguments.get("filter_existing_files", True)
+            )
+        elif name == "radarr_manual_import":
+            await client.manual_import(
+                files=arguments["files"],
+                import_mode=arguments.get("import_mode", "auto")
+            )
+            return {"status": "success", "message": "Manual import initiated"}
+        elif name == "radarr_grab_queue_item":
+            await client.grab_queue_item(queue_id=arguments["queue_id"])
+            return {"status": "success", "message": f"Queue item {arguments['queue_id']} grabbed"}
 
     async def _handle_prowlarr_tool(self, name: str, arguments: dict) -> Any:
         """Handle Prowlarr-specific tools."""
